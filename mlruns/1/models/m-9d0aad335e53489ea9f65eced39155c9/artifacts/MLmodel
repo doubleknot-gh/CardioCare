@@ -1,0 +1,25 @@
+artifact_path: "file:///c:/Users/\uAE40\uADFC\uD638/OneDrive/\uBC14\uD0D5 \uD654\uBA74\
+  /cardiocare/mlruns/1/models/m-9d0aad335e53489ea9f65eced39155c9/artifacts"
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.skops
+    predict_fn: predict
+    python_version: 3.11.4
+  sklearn:
+    code: null
+    pickled_model: model.skops
+    serialization_format: skops
+    sklearn_version: 1.9.0
+    skops_trusted_types:
+    - numpy.dtype
+mlflow_version: 3.14.0
+model_id: m-9d0aad335e53489ea9f65eced39155c9
+model_size_bytes: 225072
+model_uuid: m-9d0aad335e53489ea9f65eced39155c9
+prompts: null
+run_id: ca4faf97e29e4b71bcbd2bee8366f48f
+utc_time_created: '2026-06-17 14:13:51.659260'
