@@ -77,7 +77,7 @@ def log_experiment(
         mlflow.log_metric("cv_recall_mean", cv_scores["test_recall"].mean())
         mlflow.log_metric("cv_f1_score_mean", cv_scores["test_f1"].mean())
 
-        mlflow.sklearn.log_model(pipeline, artifact_path="model")
+        mlflow.sklearn.log_model(pipeline, artifact_path="model",skops_trusted_types=["numpy.dtype"])
         log.info("[MLflow] %s | balanced_accuracy: %.4f | precision: %.4f | recall: %.4f | f1_score: %.4f", run_name, metrics["accuracy"], metrics["precision"], metrics["recall"], metrics["f1_score"])
 
 
@@ -171,7 +171,7 @@ def tune_random_forest(
             json.dump(metrics["confusion_matrix"],f)
         mlflow.log_artifact(str(cm_path))
 
-        mlflow.sklearn.log_model(best_model, artifact_path="model")
+        mlflow.sklearn.log_model(best_model, artifact_path="model",skops_trusted_types=["numpy.dtype"])
 
 
     return metrics, best_model
