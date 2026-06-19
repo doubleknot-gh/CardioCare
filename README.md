@@ -57,7 +57,7 @@ CardioCare/
 ### 0단계 — 저장소 클론 및 환경 설정
 
 ```bash
-git clone https://github.com/<your-username>/CardioCare.git
+git clone https://github.com/doubleknot-gh/CardioCare.git
 cd CardioCare
 pip install -r requirements.txt
 ```
