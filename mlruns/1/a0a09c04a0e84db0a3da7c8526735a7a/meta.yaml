@@ -1,0 +1,14 @@
+artifact_uri: mlruns/1/a0a09c04a0e84db0a3da7c8526735a7a/artifacts
+end_time: 1781869357303
+entry_point_name: ''
+experiment_id: '1'
+lifecycle_stage: active
+run_id: a0a09c04a0e84db0a3da7c8526735a7a
+run_name: SVC
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1781869338221
+status: 3
+tags: []
+user_id: 김근호

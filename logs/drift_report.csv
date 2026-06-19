@@ -1,0 +1,6 @@
+feature,stat,p_value,drift
+age,0.0472,0.8793,False
+trestbps,0.025,1.0,False
+chol,0.2035,0.0,True
+thalach,0.0581,0.7058,False
+oldpeak,0.039,0.9782,False

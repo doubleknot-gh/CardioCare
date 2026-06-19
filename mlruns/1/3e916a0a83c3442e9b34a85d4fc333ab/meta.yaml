@@ -1,0 +1,14 @@
+artifact_uri: mlruns/1/3e916a0a83c3442e9b34a85d4fc333ab/artifacts
+end_time: 1781869376408
+entry_point_name: ''
+experiment_id: '1'
+lifecycle_stage: active
+run_id: 3e916a0a83c3442e9b34a85d4fc333ab
+run_name: RandomForest
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1781869361101
+status: 3
+tags: []
+user_id: 김근호

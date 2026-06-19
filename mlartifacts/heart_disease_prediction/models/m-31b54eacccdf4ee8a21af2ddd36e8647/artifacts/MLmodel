@@ -1,0 +1,24 @@
+artifact_path: file:///C:/Users/%EA%B9%80%EA%B7%BC%ED%98%B8/OneDrive/%EB%B0%94%ED%83%95%20%ED%99%94%EB%A9%B4/cardiocare/mlartifacts/heart_disease_prediction/models/m-31b54eacccdf4ee8a21af2ddd36e8647/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.skops
+    predict_fn: predict
+    python_version: 3.11.4
+  sklearn:
+    code: null
+    pickled_model: model.skops
+    serialization_format: skops
+    sklearn_version: 1.9.0
+    skops_trusted_types:
+    - numpy.dtype
+mlflow_version: 3.14.0
+model_id: m-31b54eacccdf4ee8a21af2ddd36e8647
+model_size_bytes: 5003001
+model_uuid: m-31b54eacccdf4ee8a21af2ddd36e8647
+prompts: null
+run_id: f002c3cbdc52481ea6e849428be70730
+utc_time_created: '2026-06-19 11:52:35.997660'

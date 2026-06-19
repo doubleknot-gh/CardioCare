@@ -1,0 +1,14 @@
+artifact_uri: mlruns/1/046f5fd60a7c4368b63517abb548ef53/artifacts
+end_time: 1781869334880
+entry_point_name: ''
+experiment_id: '1'
+lifecycle_stage: active
+run_id: 046f5fd60a7c4368b63517abb548ef53
+run_name: LogisticRegression
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1781869305618
+status: 3
+tags: []
+user_id: 김근호
