@@ -1,13 +1,12 @@
 import logging
-import os
 import json
 import warnings
-os.environ["MLFLOW_ALLOW_FILE_STORE"] = "true"
 import joblib
 import numpy as np
 import pandas as pd
 import mlflow
 import mlflow.sklearn
+from mlflow.tracking import MlflowClient
 from pathlib import Path
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
@@ -19,6 +18,7 @@ from sklearn.feature_selection import SelectFromModel
 import sys
 sys.path.append(str(Path(__file__).resolve().parent))
 from preprocessing import load_data, FEATURE_COLS, TARGET_COL, build_pipeline
+from mlflow_config import DEFAULT_EXPERIMENT_NAME, configure_mlflow, ensure_experiment
 
 warnings.filterwarnings("ignore")
 
@@ -79,6 +79,7 @@ def log_experiment(
 
         mlflow.sklearn.log_model(pipeline, artifact_path="model",skops_trusted_types=["numpy.dtype"])
         log.info("[MLflow] %s | balanced_accuracy: %.4f | precision: %.4f | recall: %.4f | f1_score: %.4f", run_name, metrics["accuracy"], metrics["precision"], metrics["recall"], metrics["f1_score"])
+        return mlflow.active_run().info.run_id
 
 
 def train_model(
@@ -90,7 +91,7 @@ def train_model(
         X_test:pd.DataFrame,
         Y_test:pd.Series,
         extra_params:dict={},
-) -> tuple[dict,dict,Pipeline]:
+) -> tuple[dict,dict,Pipeline,str]:
     log.info("Training model %s", name)
     log.info("\n"+"="*50+"\n")
     log.info("Model start: %s", name)
@@ -117,15 +118,15 @@ def train_model(
     log.info("\n%s", classification_report(Y_test, Y_pred, target_names=["No Disease", "Disease"]))
 
     params ={"model": name,"random_state": RANDOM_STATE, **extra_params}
-    log_experiment(run_name=name, model_family=model_family, params=params, metrics=metrics, cv_scores=cv_scores, pipeline=full_pipeline)
-    return metrics, cv_scores, full_pipeline
+    run_id=log_experiment(run_name=name, model_family=model_family, params=params, metrics=metrics, cv_scores=cv_scores, pipeline=full_pipeline)
+    return metrics, cv_scores, full_pipeline, run_id
 
 def tune_random_forest(
     X_train: pd.DataFrame,
     Y_train: pd.Series,
     X_test: pd.DataFrame,
     Y_test: pd.Series,
-    ) -> tuple[dict,Pipeline]:
+    ) -> tuple[dict,Pipeline,str]:
     log.info("Tuning Random Forest")
     log.info("\n"+"="*50+"\n")
         
@@ -172,9 +173,23 @@ def tune_random_forest(
         mlflow.log_artifact(str(cm_path))
 
         mlflow.sklearn.log_model(best_model, artifact_path="model",skops_trusted_types=["numpy.dtype"])
+        run_id=mlflow.active_run().info.run_id
+
+    return metrics, best_model, run_id
 
 
-    return metrics, best_model
+def tag_model_selection(run_ids:dict[str,str], best_name:str, best_metrics:dict) -> None:
+    client=MlflowClient()
+    for model_name, run_id in run_ids.items():
+        is_selected=model_name == best_name
+        client.set_tag(run_id, "selected_model", str(is_selected).lower())
+        client.set_tag(run_id, "model_role", "final_candidate" if is_selected else "comparison_candidate")
+        client.set_tag(run_id, "selection_metric", "recall")
+        if is_selected:
+            client.set_tag(run_id, "selection_reason", "highest_recall")
+            client.set_tag(run_id, "best_model_name", best_name)
+            client.set_tag(run_id, "best_model_recall", f"{best_metrics['recall']:.4f}")
+    log.info("Tagged selected MLflow run: %s", best_name)
 
 def print_comparison_table(results:dict) -> None:
     rows=[]
@@ -194,14 +209,17 @@ def print_comparison_table(results:dict) -> None:
     
 def main():
     log.info("Starting training process")
+    tracking_uri=configure_mlflow()
+    experiment=ensure_experiment(DEFAULT_EXPERIMENT_NAME)
+    mlflow.set_experiment(experiment.name)
+    log.info("MLflow tracking URI: %s", tracking_uri)
+    log.info("MLflow experiment: %s (id=%s)", experiment.name, experiment.experiment_id)
 
     X, Y = load_data()
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=Y)
 
     log.info("Data split | Train shape: %s | Test shape: %s", X_train.shape, X_test.shape)
     log.info("Train target : no disease: %d | disease: %d", (Y_train==0).sum(), (Y_train==1).sum())
-
-    mlflow.set_experiment("Heart Disease Prediction")
 
     models={
         "LogisticRegression": ("LogisticRegression",LogisticRegression(max_iter=1000,random_state=RANDOM_STATE), {"max_iter":1000}),
@@ -211,14 +229,17 @@ def main():
 
     results={}
     pipelines={}
+    run_ids={}
     for name,(family,model,extra_params) in models.items():
-        metrics, cv_scores, pipeline=train_model(name, family, model, X_train, Y_train, X_test, Y_test, extra_params)
+        metrics, cv_scores, pipeline, run_id=train_model(name, family, model, X_train, Y_train, X_test, Y_test, extra_params)
         results[name]=(metrics, cv_scores)
         pipelines[name]=pipeline
+        run_ids[name]=run_id
 
-    best_rf_metrics, best_rf_model=tune_random_forest(X_train, Y_train, X_test, Y_test)
+    best_rf_metrics, best_rf_model, best_rf_run_id=tune_random_forest(X_train, Y_train, X_test, Y_test)
     results["RandomForest_Tuned"]=(best_rf_metrics, None)
     pipelines["RandomForest_Tuned"]=best_rf_model
+    run_ids["RandomForest_Tuned"]=best_rf_run_id
 
     print_comparison_table(results)
 
@@ -230,6 +251,7 @@ def main():
     log.info("Precision: %.4f", best_metrics["precision"])
     log.info("F1 Score: %.4f", best_metrics["f1_score"])
     log.info("Balanced Accuracy: %.4f", best_metrics["accuracy"])
+    tag_model_selection(run_ids, best_name, best_metrics)
 
     model_path=MODEL_DIR/"best_model.pkl"
     joblib.dump(pipelines[best_name], model_path)

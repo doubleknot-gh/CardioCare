@@ -16,9 +16,11 @@ CardioCare/
 │   ├── processed.va.data
 │   └── sample_input.csv
 ├── notebooks/
-│   └── 01_eda_preprocessing.ipynb
+│   ├── 01_eda_preprocessing.ipynb
+│   └── 01_eda_preprocessing.executed.ipynb
 ├── src/
 │   ├── preprocessing.py
+│   ├── mlflow_config.py
 │   ├── train.py
 │   ├── inference.py
 │   └── monitor.py
@@ -26,11 +28,15 @@ CardioCare/
 │   └── test_pipeline.py
 ├── models/
 │   └── best_model.pkl
-├── mlruns/
+├── mlruns/                  # legacy file-store runs (optional migration source)
+├── mlartifacts/
+├── mlflow.db
 ├── logs/
+├── start_mlflow_ui.ps1
 ├── Dockerfile
 ├── requirements.txt
 ├── .github/workflows/ci.yml
+├── report.docx
 ├── report.pdf
 └── README.md
 ```
@@ -64,12 +70,29 @@ python src/train.py
 
 완료되면:
 - `models/best_model.pkl` 자동 생성
-- MLflow 실험 기록 → `mlruns/`
+- MLflow 실험 기록 → `mlflow.db`
+- MLflow 아티팩트 → `mlartifacts/`
+- 최종 선택 모델은 MLflow run tag `selected_model=true`로 표시
 
 MLflow UI 확인:
-```bash
-mlflow ui
-# → http://localhost:5000
+```powershell
+.\start_mlflow_ui.ps1
+# → http://127.0.0.1:5000
+```
+
+직접 실행:
+```powershell
+mlflow ui --backend-store-uri "sqlite:///mlflow.db" --port 5000
+```
+
+UI 확인 포인트:
+- `Experiments` → `Heart Disease Prediction`
+- `Training Runs`에 `LogisticRegression`, `SVC`, `RandomForest`, `RandomForest_Tuned` 표시
+- 최종 선택 모델 run의 `Tags`에 `selected_model=true`, `model_role=final_candidate` 표시
+
+기존 `mlruns/` file-store 기록이 있다면 1회 마이그레이션:
+```powershell
+mlflow migrate-filestore --source .\mlruns --target "sqlite:///mlflow.db" --progress
 ```
 
 ### 2단계 — 단위 테스트
@@ -92,10 +115,19 @@ test_validate_input_ranges ... ok
 Ran 8 tests in 0.5s OK
 ```
 
-### 3단계 — Docker 빌드 및 추론
+### 3단계 — 로컬 추론
 
 ```bash
-# 빌드
+python src/inference.py --input data/sample_input.csv --output logs/predictions.csv
+```
+
+완료되면:
+- `logs/inference.log` — 추론 로그
+- `logs/predictions.csv` — 예측 결과 CSV
+
+### 4단계 — Docker 빌드 및 추론
+
+```bash
 docker build -t cardiocare:1.0 .
 
 # 실행
@@ -107,7 +139,7 @@ Windows PowerShell:
 docker run --rm -v ${PWD}/data:/app/data cardiocare:1.0
 ```
 
-### 4단계 — 모니터링 및 드리프트 탐지
+### 5단계 — 모니터링 및 드리프트 탐지
 
 ```bash
 python src/monitor.py
@@ -173,16 +205,19 @@ RANDOM_STATE = 42
 python src/train.py
 
 # 2. MLflow 확인
-mlflow ui  # → http://localhost:5000
+.\start_mlflow_ui.ps1  # → http://127.0.0.1:5000
 
 # 3. 테스트
 python -m unittest discover tests/ -v
 
-# 4. Docker
+# 4. 로컬 추론
+python src/inference.py --input data/sample_input.csv --output logs/predictions.csv
+
+# 5. Docker
 docker build -t cardiocare:1.0 .
 docker run --rm -v $(pwd)/data:/app/data cardiocare:1.0
 
-# 5. 드리프트
+# 6. 드리프트
 python src/monitor.py
 ```
 
@@ -193,4 +228,3 @@ python src/monitor.py
 프로젝트에서 Claude를 코드 작성 및 디버깅 보조, Word 템플릿 디자인, README 작성 목적으로 사용했다. 모든 설계 결정, 모델 선택 근거, 분석 해석, 보고서 작성은 나 자신이 수행했음을 알림.
 
 ---
-
